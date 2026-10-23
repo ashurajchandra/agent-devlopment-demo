@@ -8,3 +8,5 @@ A tiny web app used as the "company repository" for the delivery pipeline demo.
 - `test/`: unit tests, run with `npm test`
 
 Conventions: plain ES modules, no dependencies, every change to `src/` needs a test.
+
+> Smoke-tested with the Showwork GitHub connector.
