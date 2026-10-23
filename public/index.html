@@ -14,8 +14,30 @@
         <button type="submit">Add</button>
       </form>
       <p id="error" role="alert" hidden></p>
-      <ul id="list"></ul>
+      
+      <div class="columns">
+        <div class="column" data-status="todo">
+          <h2>Todo</h2>
+          <ul id="list-todo" class="task-list" data-status="todo"></ul>
+        </div>
+        <div class="column" data-status="in_progress">
+          <h2>In Progress</h2>
+          <ul id="list-in_progress" class="task-list" data-status="in_progress"></ul>
+        </div>
+        <div class="column" data-status="done">
+          <h2>Done</h2>
+          <ul id="list-done" class="task-list" data-status="done"></ul>
+        </div>
+      </div>
+
+      <section id="audit-trail-section">
+        <h2>Audit Trail</h2>
+        <ul id="audit-trail"></ul>
+      </section>
     </main>
+
+    <div id="toast-container"></div>
+
     <script type="module" src="/app.js"></script>
   </body>
 </html>
