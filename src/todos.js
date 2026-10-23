@@ -21,3 +21,13 @@ export function removeTodo(todos, id) {
 export function sortTodos(todos) {
   return [...todos].sort((a, b) => Number(a.done) - Number(b.done));
 }
+
+export function reorderTodos(todos, sourceId, targetId) {
+  const sourceIndex = todos.findIndex((t) => t.id === sourceId);
+  const targetIndex = todos.findIndex((t) => t.id === targetId);
+  if (sourceIndex === -1 || targetIndex === -1) return todos;
+  const result = [...todos];
+  const [removed] = result.splice(sourceIndex, 1);
+  result.splice(targetIndex, 0, removed);
+  return result;
+}
