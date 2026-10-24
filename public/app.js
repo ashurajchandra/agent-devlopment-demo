@@ -5,6 +5,9 @@ import {
   toggleTodo,
   updateTodoStatus,
   createAuditEvent,
+  addTagToTodo,
+  removeTagFromTodo,
+  getUniqueTags,
 } from "/src/todos.js";
 
 const KEY_TODOS = "todos";
@@ -21,6 +24,8 @@ const auditLog = document.querySelector("#audit-log");
 
 let todos = JSON.parse(localStorage.getItem(KEY_TODOS) ?? "[]");
 let auditHistory = JSON.parse(localStorage.getItem(KEY_AUDIT) ?? "[]");
+
+let selectedTagFilter = null;
 
 function save() {
   localStorage.setItem(KEY_TODOS, JSON.stringify(todos));
@@ -46,14 +51,75 @@ function formatLogEntry(text, status) {
   return `${text} (${status})`;
 }
 
+function getTagColor(tag) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 70%, 90%)`;
+}
+
+function renderFilters() {
+  const filterBar = document.querySelector("#filter-bar");
+  if (!filterBar) return;
+  filterBar.replaceChildren();
+
+  const uniqueTags = getUniqueTags(todos);
+
+  // 'All' chip
+  const allChip = document.createElement("button");
+  allChip.className = `filter-chip ${!selectedTagFilter ? "active" : ""}`;
+  allChip.textContent = "All";
+  allChip.addEventListener("click", () => {
+    selectedTagFilter = null;
+    render();
+  });
+  filterBar.appendChild(allChip);
+
+  // Individual tag chips
+  uniqueTags.forEach((tag) => {
+    const chip = document.createElement("button");
+    const isActive = selectedTagFilter && selectedTagFilter.toLowerCase() === tag.toLowerCase();
+    chip.className = `filter-chip ${isActive ? "active" : ""}`;
+    chip.textContent = tag;
+    chip.addEventListener("click", () => {
+      if (isActive) {
+        selectedTagFilter = null;
+      } else {
+        selectedTagFilter = tag;
+      }
+      render();
+    });
+    filterBar.appendChild(chip);
+  });
+}
+
 function render() {
+  // Render filters first
+  renderFilters();
+
   // Clear lists
   listTodo.replaceChildren();
   listInProgress.replaceChildren();
   listDone.replaceChildren();
 
+  const filteredTodos = selectedTagFilter
+    ? todos.filter((todo) => (todo.tags || []).some((tag) => tag.toLowerCase() === selectedTagFilter.toLowerCase()))
+    : todos;
+
+  const matchesZero = selectedTagFilter && filteredTodos.length === 0;
+  const noTodosMsg = document.querySelector("#no-todos-msg");
+  if (noTodosMsg) {
+    if (matchesZero) {
+      noTodosMsg.style.display = "block";
+    } else {
+      noTodosMsg.style.display = "none";
+    }
+  }
+
   // Populate lists
-  todos.forEach((todo) => {
+  filteredTodos.forEach((todo) => {
     // Ensure all existing todos have a status
     if (!todo.status) {
       todo.status = todo.done ? "done" : "todo";
@@ -74,6 +140,9 @@ function render() {
     card.addEventListener("dragend", () => {
       card.classList.remove("dragging");
     });
+
+    const topRow = document.createElement("div");
+    topRow.className = "todo-top-row";
 
     const check = document.createElement("input");
     check.type = "checkbox";
@@ -109,7 +178,61 @@ function render() {
       render();
     });
 
-    card.append(check, label, removeBtn);
+    topRow.append(check, label, removeBtn);
+
+    const tagsContainer = document.createElement("div");
+    tagsContainer.className = "todo-tags-container";
+
+    const currentTags = todo.tags || [];
+    currentTags.forEach((tag) => {
+      const tagChip = document.createElement("span");
+      tagChip.className = "tag-chip";
+      tagChip.textContent = tag;
+      tagChip.style.backgroundColor = getTagColor(tag);
+
+      const removeTagBtn = document.createElement("button");
+      removeTagBtn.className = "remove-tag-btn";
+      removeTagBtn.textContent = "x";
+      removeTagBtn.setAttribute("aria-label", `Remove tag ${tag}`);
+      removeTagBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        todos = removeTagFromTodo(todos, todo.id, tag);
+        save();
+        render();
+      });
+
+      tagChip.appendChild(removeTagBtn);
+      tagsContainer.appendChild(tagChip);
+    });
+
+    const addTagForm = document.createElement("div");
+    addTagForm.className = "add-tag-form";
+
+    const addTagInput = document.createElement("input");
+    addTagInput.type = "text";
+    addTagInput.className = "add-tag-input";
+    addTagInput.placeholder = "Add tag";
+    addTagInput.setAttribute("aria-label", "Add tag to todo");
+    addTagInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = addTagInput.value.trim();
+        if (val) {
+          try {
+            todos = addTagToTodo(todos, todo.id, val);
+            save();
+            render();
+          } catch (err) {
+            showToast(err.message);
+          }
+        }
+      }
+    });
+
+    addTagForm.appendChild(addTagInput);
+
+    card.append(topRow, tagsContainer, addTagForm);
 
     if (todo.status === "in-progress") {
       listInProgress.appendChild(card);

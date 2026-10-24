@@ -8,6 +8,9 @@ import {
   toggleTodo,
   updateTodoStatus,
   createAuditEvent,
+  addTagToTodo,
+  removeTagFromTodo,
+  getUniqueTags,
 } from "../src/todos.js";
 
 test("createTodo trims the title and starts not done", () => {
@@ -67,4 +70,48 @@ test("createAuditEvent generates a standard event structure", () => {
   assert.equal(event.newText, "new item");
   assert.equal(event.newStatus, "in-progress");
   assert.ok(event.timestamp);
+});
+
+test("addTagToTodo adds valid tags, avoids duplicates case-insensitively, and limits to 5", () => {
+  const todo = createTodo("tag test");
+  let list = [todo];
+
+  // Trim and add
+  list = addTagToTodo(list, todo.id, "  Work  ");
+  assert.deepEqual(list[0].tags, ["Work"]);
+
+  // Duplicate case-insensitive does nothing
+  const countBefore = list[0].tags.length;
+  list = addTagToTodo(list, todo.id, "work");
+  assert.equal(list[0].tags.length, countBefore);
+
+  // Validate length constraints
+  assert.throws(() => addTagToTodo(list, todo.id, ""), /cannot be empty/);
+  assert.throws(() => addTagToTodo(list, todo.id, "a".repeat(21)), /cannot exceed 20 characters/);
+
+  // Max 5 tags
+  list = addTagToTodo(list, todo.id, "Personal");
+  list = addTagToTodo(list, todo.id, "Urgent");
+  list = addTagToTodo(list, todo.id, "Code");
+  list = addTagToTodo(list, todo.id, "Review");
+  assert.deepEqual(list[0].tags, ["Work", "Personal", "Urgent", "Code", "Review"]);
+
+  assert.throws(() => addTagToTodo(list, todo.id, "Extra"), /maximum of 5 tags/);
+});
+
+test("removeTagFromTodo removes tags case-insensitively", () => {
+  const todo = { ...createTodo("remove tag test"), tags: ["Work", "Personal"] };
+  let list = [todo];
+
+  list = removeTagFromTodo(list, todo.id, "work");
+  assert.deepEqual(list[0].tags, ["Personal"]);
+});
+
+test("getUniqueTags returns unique tags across all todos", () => {
+  const t1 = { ...createTodo("t1"), tags: ["Work", "Personal"] };
+  const t2 = { ...createTodo("t2"), tags: ["work", "Urgent"] };
+  const t3 = { ...createTodo("t3") };
+
+  const unique = getUniqueTags([t1, t2, t3]);
+  assert.deepEqual(unique, ["Work", "Personal", "Urgent"]);
 });

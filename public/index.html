@@ -16,7 +16,11 @@
       </form>
       <p id="error" role="alert" hidden></p>
       
+      <div id="filter-bar" class="filter-bar"></div>
+
       <div class="kanban-board">
+        <div id="no-todos-msg" class="no-todos-msg" style="display: none;">No todos with this tag.</div>
+        
         <div class="kanban-column" id="col-todo" data-status="todo">
           <h2>Todo</h2>
           <div class="kanban-cards" id="list-todo"></div>
