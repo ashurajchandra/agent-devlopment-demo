@@ -7,14 +7,42 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <div id="toast-container"></div>
     <main>
-      <h1>Todos</h1>
+      <h1>Todos Kanban Board</h1>
       <form id="add-form">
         <input id="title" type="text" placeholder="What needs doing?" autocomplete="off" />
         <button type="submit">Add</button>
       </form>
       <p id="error" role="alert" hidden></p>
-      <ul id="list"></ul>
+      
+      <div class="kanban-board">
+        <div class="kanban-column" id="col-todo" data-status="todo">
+          <h2>Todo</h2>
+          <div class="kanban-cards" id="list-todo"></div>
+        </div>
+        
+        <div class="kanban-column" id="col-inprogress" data-status="in-progress">
+          <h2>In Progress</h2>
+          <div class="kanban-cards" id="list-inprogress"></div>
+        </div>
+        
+        <div class="kanban-column" id="col-done" data-status="done">
+          <h2>Done</h2>
+          <div class="kanban-cards" id="list-done"></div>
+        </div>
+      </div>
+
+      <section id="audit-trail-panel">
+        <h2>Audit Trail</h2>
+        <div class="audit-header">
+          <span>Timestamp</span>
+          <span>Operation</span>
+          <span>Old Text/Status</span>
+          <span>New Text/Status</span>
+        </div>
+        <ul id="audit-log"></ul>
+      </section>
     </main>
     <script type="module" src="/app.js"></script>
   </body>
