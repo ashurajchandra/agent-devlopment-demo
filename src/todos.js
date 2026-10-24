@@ -2,11 +2,39 @@
 
 let counter = 0;
 
-export function createTodo(title) {
+export function getLocalDateStr(dateInput) {
+  if (!dateInput) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return dateInput;
+  }
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function formatDueDate(dueDateStr) {
+  const norm = getLocalDateStr(dueDateStr);
+  if (!norm) return "";
+  const parts = norm.split('-');
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${weekdays[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+export function createTodo(title, dueDate = null) {
   const text = String(title ?? "").trim();
   if (!text) throw new Error("A todo needs a title.");
   counter += 1;
-  return { id: `t${Date.now()}-${counter}`, title: text, done: false, status: "todo", tags: [] };
+  const todo = { id: `t${Date.now()}-${counter}`, title: text, done: false, status: "todo", tags: [] };
+  const normDate = getLocalDateStr(dueDate);
+  if (normDate) {
+    todo.dueDate = normDate;
+  }
+  return todo;
 }
 
 export function toggleTodo(todos, id) {
@@ -45,7 +73,43 @@ export function removeTodo(todos, id) {
 
 // Open todos first, finished ones last; otherwise keep the order they were added.
 export function sortTodos(todos) {
-  return [...todos].sort((a, b) => Number(a.done) - Number(b.done));
+  const indexed = todos.map((todo, index) => ({ todo, index }));
+
+  indexed.sort((x, y) => {
+    const a = x.todo;
+    const b = y.todo;
+
+    // 1. Completed status
+    if (a.done !== b.done) {
+      return Number(a.done) - Number(b.done);
+    }
+
+    // Both are open (done is false)
+    if (!a.done) {
+      const normA = getLocalDateStr(a.dueDate);
+      const normB = getLocalDateStr(b.dueDate);
+      const aValid = !!normA;
+      const bValid = !!normB;
+
+      if (aValid && bValid) {
+        // Compare dates (earliest first)
+        const timeA = new Date(normA).getTime();
+        const timeB = new Date(normB).getTime();
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+      } else if (aValid) {
+        return -1; // a has due date, b does not, so a comes first
+      } else if (bValid) {
+        return 1; // b has due date, a does not, so b comes first
+      }
+    }
+
+    // Fallback to original order
+    return x.index - y.index;
+  });
+
+  return indexed.map(item => item.todo);
 }
 
 export function createAuditEvent(operation, oldTodo, newTodo) {
