@@ -11,6 +11,8 @@ import {
   addTagToTodo,
   removeTagFromTodo,
   getUniqueTags,
+  getLocalDateStr,
+  formatDueDate,
 } from "../src/todos.js";
 
 test("createTodo trims the title and starts not done", () => {
@@ -114,4 +116,51 @@ test("getUniqueTags returns unique tags across all todos", () => {
 
   const unique = getUniqueTags([t1, t2, t3]);
   assert.deepEqual(unique, ["Work", "Personal", "Urgent"]);
+});
+
+// NEW TESTS FOR DUE DATE
+
+test("createTodo supports optional valid due dates", () => {
+  const todoWithDate = createTodo("buy milk", "2023-11-03");
+  assert.equal(todoWithDate.dueDate, "2023-11-03");
+
+  const todoWithNoDate = createTodo("buy milk", null);
+  assert.equal(todoWithNoDate.dueDate, undefined);
+
+  const todoWithInvalidDate = createTodo("buy milk", "invalid-date-string");
+  assert.equal(todoWithInvalidDate.dueDate, undefined);
+});
+
+test("getLocalDateStr correctly parses standard date formats timezone-independently", () => {
+  assert.equal(getLocalDateStr("2023-11-03"), "2023-11-03");
+  assert.equal(getLocalDateStr("2024-02-29"), "2024-02-29");
+  assert.equal(getLocalDateStr("invalid"), null);
+  assert.equal(getLocalDateStr(""), null);
+  assert.equal(getLocalDateStr(null), null);
+});
+
+test("formatDueDate correctly formats YYYY-MM-DD string as Mon 3 Nov", () => {
+  assert.equal(formatDueDate("2023-11-03"), "Fri 3 Nov");
+  assert.equal(formatDueDate("2024-01-01"), "Mon 1 Jan");
+  assert.equal(formatDueDate("invalid"), "");
+});
+
+test("sortTodos correctly orders by completed, then unfinished with earliest due date first, then unfinished without due date", () => {
+  const todoNoDate = { ...createTodo("no date"), dueDate: undefined };
+  const todoFar = { ...createTodo("future date"), dueDate: "2023-12-25" };
+  const todoNear = { ...createTodo("near date"), dueDate: "2023-11-03" };
+  const todoCompleted = { ...createTodo("completed"), done: true, dueDate: "2023-10-01" };
+  const todoInvalidDate = { ...createTodo("invalid date"), dueDate: "invalid-date-format" };
+
+  const list = [todoFar, todoNoDate, todoCompleted, todoNear, todoInvalidDate];
+  const sorted = sortTodos(list);
+
+  // Unfinished with valid dates earliest first: near date ("2023-11-03"), future date ("2023-12-25")
+  // Then unfinished without valid dates (or legacy invalid dates): "no date", "invalid date"
+  // Then completed at the very bottom: "completed"
+  assert.equal(sorted[0].title, "near date");
+  assert.equal(sorted[1].title, "future date");
+  assert.equal(sorted[2].title, "no date");
+  assert.equal(sorted[3].title, "invalid date");
+  assert.equal(sorted[4].title, "completed");
 });

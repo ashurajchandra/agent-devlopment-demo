@@ -8,6 +8,8 @@ import {
   addTagToTodo,
   removeTagFromTodo,
   getUniqueTags,
+  getLocalDateStr,
+  formatDueDate,
 } from "/src/todos.js";
 
 const KEY_TODOS = "todos";
@@ -108,7 +110,9 @@ function render() {
     ? todos.filter((todo) => (todo.tags || []).some((tag) => tag.toLowerCase() === selectedTagFilter.toLowerCase()))
     : todos;
 
-  const matchesZero = selectedTagFilter && filteredTodos.length === 0;
+  const sortedTodos = sortTodos(filteredTodos);
+
+  const matchesZero = selectedTagFilter && sortedTodos.length === 0;
   const noTodosMsg = document.querySelector("#no-todos-msg");
   if (noTodosMsg) {
     if (matchesZero) {
@@ -119,7 +123,7 @@ function render() {
   }
 
   // Populate lists
-  filteredTodos.forEach((todo) => {
+  sortedTodos.forEach((todo) => {
     // Ensure all existing todos have a status
     if (!todo.status) {
       todo.status = todo.done ? "done" : "todo";
@@ -164,6 +168,32 @@ function render() {
     label.className = "label";
     label.textContent = todo.title;
 
+    let dueDateSpan = null;
+    if (todo.dueDate) {
+      const normDate = getLocalDateStr(todo.dueDate);
+      if (normDate) {
+        dueDateSpan = document.createElement("span");
+        dueDateSpan.className = "todo-due-date";
+        
+        const formatted = formatDueDate(normDate);
+        if (todo.done) {
+          dueDateSpan.textContent = ` (${formatted})`;
+        } else {
+          const today = new Date();
+          const localTodayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          if (normDate < localTodayStr) {
+            dueDateSpan.textContent = ` (${formatted} - Overdue)`;
+            dueDateSpan.classList.add("overdue");
+          } else if (normDate === localTodayStr) {
+            dueDateSpan.textContent = ` (${formatted} - Due today)`;
+            dueDateSpan.classList.add("due-today");
+          } else {
+            dueDateSpan.textContent = ` (${formatted})`;
+          }
+        }
+      }
+    }
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "remove";
     removeBtn.textContent = "Delete";
@@ -178,7 +208,11 @@ function render() {
       render();
     });
 
-    topRow.append(check, label, removeBtn);
+    if (dueDateSpan) {
+      topRow.append(check, label, dueDateSpan, removeBtn);
+    } else {
+      topRow.append(check, label, removeBtn);
+    }
 
     const tagsContainer = document.createElement("div");
     tagsContainer.className = "todo-tags-container";
@@ -308,7 +342,8 @@ document.querySelectorAll(".kanban-column").forEach((column) => {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   try {
-    const newTodo = createTodo(input.value);
+    const dueDateInput = document.querySelector("#due-date");
+    const newTodo = createTodo(input.value, dueDateInput ? dueDateInput.value : null);
     todos = [...todos, newTodo];
     
     const auditEvent = createAuditEvent("create", null, newTodo);
@@ -316,6 +351,9 @@ form.addEventListener("submit", (event) => {
 
     errorBox.hidden = true;
     input.value = "";
+    if (dueDateInput) {
+      dueDateInput.value = "";
+    }
     
     save();
     render();

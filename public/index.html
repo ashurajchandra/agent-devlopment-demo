@@ -12,12 +12,14 @@
       <h1>Todos Kanban Board</h1>
       <form id="add-form">
         <input id="title" type="text" placeholder="What needs doing?" autocomplete="off" />
+        <label for="due-date">Due date</label>
+        <input id="due-date" type="date" />
         <button type="submit">Add</button>
       </form>
       <p id="error" role="alert" hidden></p>
       
       <div id="filter-bar" class="filter-bar"></div>
-
+  
       <div class="kanban-board">
         <div id="no-todos-msg" class="no-todos-msg" style="display: none;">No todos with this tag.</div>
         
@@ -36,7 +38,7 @@
           <div class="kanban-cards" id="list-done"></div>
         </div>
       </div>
-
+  
       <section id="audit-trail-panel">
         <h2>Audit Trail</h2>
         <div class="audit-header">
